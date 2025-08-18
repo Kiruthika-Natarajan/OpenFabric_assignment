@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/postgres
+      - REDIS_URL=redis://redis:6379/0
+      - POSTING_SERVICE_URL=http://mock-posting-service:8081
+    depends_on:
+      - db
+      - redis
+      - mock-posting-service
+
+  worker:
+    build: .
+    command: celery -A app.worker.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/postgres
+      - REDIS_URL=redis://redis:6379/0
+      - POSTING_SERVICE_URL=http://mock-posting-service:8081
+    depends_on:
+      - db
+      - redis
+      - mock-posting-service
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  mock-posting-service:
+    image: vinhopenfabric/mock-posting-service
+    platform: linux/arm64/v8
+    ports:
+      - "8081:8081"
